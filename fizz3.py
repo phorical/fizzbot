@@ -54,6 +54,33 @@ def get_correct_answer(question_url):
 
 # do the next question
 def do_question(domain, question_url):
+
+    request = urllib.request.urlopen( ('%s%s' % (domain, question_url)) )
+    question_data = json.load(request)
+    numbers = question_data.get('numbers')
+
+    if (numbers) :
+        string = ''
+        it = iter(numbers)
+        try :
+            currentNumber = next(it)
+            boolean = False
+            if (currentNumber % 3 == 0):
+                string += 'Fizz'
+                boolean = True
+            if (currentNumber % 5 == 0):
+                string += 'Buzz'
+                boolean = True
+            if not boolean:
+                string += currentNumber
+            string += ' '
+        except StopIteration:
+            string[0,len(string)-2]
+        response = try_answer(question_url, string)
+
+    req = urllib.request.Request(domain + question_url, data=body.encode('utf8'), headers={'Content-Type': 'application/json'})
+    res = urllib.request.urlopen(req)
+    """
     print_sep()
     print('*** GET %s' % question_url)
 
@@ -66,10 +93,25 @@ def do_question(domain, question_url):
 
     if next_question: return next_question
     return get_correct_answer(question_url)
+    """
 
+def first_question(domain, question_url):
+    body = json.dumps({'answer':'COBOL'})
+    try:
+        request = urllib.request.Request(domain + question_url, data=body.encode('utf8'), headers={'Content-Type': 'application/json'})
+        res = urllib.request.urlopen(request)
+        response = json.load(res)
+        return response
+    except urllib.error.HTTPError as e:
+        response = json.load(e)
+        print_response(response)
+        return response
+    return
 
 def main():
     question_url = '/fizzbot'
+    first_question(domain, question_url)
+    return
     while question_url:
         question_url = do_question(domain, question_url)
 
