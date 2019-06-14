@@ -57,6 +57,7 @@ def do_question(domain, question_url):
 
     request = urllib.request.urlopen( ('%s%s' % (domain, question_url)) )
     question_data = json.load(request)
+    print(question_data)
     numbers = question_data.get('numbers')
 
     if (numbers) :
@@ -94,35 +95,56 @@ def do_question(domain, question_url):
     if next_question: return next_question
     return get_correct_answer(question_url)
     """
+
+def apply_rules(number, rules):
+    ret = ''
+    printNumber = True
+    for rule in rules:
+        if (number % rule[0] == 0):
+            ret += rule[1]
+            printNumber = False
+    if printNumber:
+        ret += str(number)
+    return ret
+
+def make_rules(rules):
+    arr = []
+    for rule in rules:
+        arr.append([int(rule.get('number')), rule.get('response')])
+    return arr
+
 def do_next_question(domain, question_url):
     request = urllib.request.urlopen( ('%s%s' % (domain, question_url)) )
     question_data = json.load(request)
-    print(question_data.get('message'))
+    #print(question_data.get('message'))
+    #print(question_data.get('rules'))
+    rules = make_rules(question_data.get('rules'))
     numbers = question_data.get('numbers')
+    #print(numbers)
+    #print(rules)
     body = None
     if (numbers) :
         string = ''
         it = iter(numbers)
         try :
-            currentNumber = next(it)
-            boolean = False
-            if (currentNumber % 3 == 0):
-                string += 'Fizz'
-                boolean = True
-            if (currentNumber % 5 == 0):
-                string += 'Buzz'
-                boolean = True
-            if not boolean:
-                string += currentNumber
-            string += ' '
+            while True:
+                currentNumber = int(next(it))
+                string += apply_rules(currentNumber, rules)
+                string += ' '
         except StopIteration:
-            string[0,len(string)-2]
-        body = json.dumps({'answer': string})
+            string = string[0:-1]
+        #print(string)
+        body = json.dumps({ 'answer':string })
+    print(body + " to " + domain + " " + question_url)
     req = urllib.request.Request(domain + question_url, data=body.encode('utf8'), headers={'Content-Type': 'application/json'})
+    #print(req.get_full_url())
     res = urllib.request.urlopen(req)
     response = json.load(res)
-    nextQuestion = res.get('nextQuestion')
-    return do_next_question(domain, nextQuestion)
+    #print(response)
+    nextQuestion = response.get('nextQuestion')
+    if nextQuestion:
+        return do_next_question(domain, nextQuestion)
+    print(response.get('message'))
 
 
 def first_question(domain, question_url):
@@ -131,9 +153,13 @@ def first_question(domain, question_url):
         firstRawResponse = urllib.request.urlopen( ('%s%s' % (domain, question_url)) )
         firstParsedResponse = json.load(firstRawResponse)
         firstQuestionUrl = firstParsedResponse.get('nextQuestion')
-        postFirstAnswer = urllib.request.Request(domain + firstQuestionUrl, data=body.encode('utf8'), headers={'Content-Type': 'application/json'})
-        firstQuestionResponse = urllib.request.urlopen(postFirstAnswer)
-        return json.load(firstQuestionResponse).get('nextQuestion')
+        #postFirstAnswer = urllib.request.Request(domain + firstQuestionUrl, data=body.encode('utf8'), headers={'Content-Type': 'application/json'})
+        #firstQuestionResponse = urllib.request.urlopen(postFirstAnswer)
+        #parsedfirstQuestionResponse = json.load(firstQuestionResponse)
+        #secondQuestionUrl = parsedfirstQuestionResponse.get('nextQuestion')
+        postSecondAnswer = urllib.request.Request(domain + firstQuestionUrl, data=body.encode('utf8'), headers={'Content-Type': 'application/json'})
+        secondQuestionResponse = urllib.request.urlopen(postSecondAnswer)
+        return json.load(secondQuestionResponse).get('nextQuestion')
     except urllib.error.HTTPError as e:
         response = json.load(e)
         print_response(response)
@@ -143,7 +169,7 @@ def first_question(domain, question_url):
 def main():
     question_url = '/fizzbot'
     next_question = first_question(domain, question_url)
-    print(next_question)
+    #print(next_question)
     do_next_question(domain, next_question)
     return
     while question_url:
